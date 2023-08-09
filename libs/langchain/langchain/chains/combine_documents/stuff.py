@@ -69,6 +69,10 @@ class StuffDocumentsChain(BaseCombineDocumentsChain):
     document_separator: str = "\n\n"
     """The string with which to join the formatted documents"""
 
+
+    enumerate = True
+
+
     class Config:
         """Configuration for this pydantic object."""
 
@@ -123,7 +127,22 @@ class StuffDocumentsChain(BaseCombineDocumentsChain):
             for k, v in kwargs.items()
             if k in self.llm_chain.prompt.input_variables
         }
-        inputs[self.document_variable_name] = self.document_separator.join(doc_strings)
+
+
+        if self.enumerate:
+            inputs[self.document_variable_name] = ''
+
+            for i, doc in enumerate(doc_strings):
+                inputs[self.document_variable_name] = inputs[self.document_variable_name] + f'[{i+1}] ' + doc  + self.document_separator
+            # print(inputs[self.document_variable_name])
+        else:
+            inputs[self.document_variable_name] = self.document_separator.join(doc_strings)
+
+        import tiktoken
+        encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+        inputs[self.document_variable_name] = encoding.decode(encoding.encode(inputs[self.document_variable_name].strip())[0:3000])
+
+        #inputs[self.document_variable_name] = self.document_separator.join(doc_strings)
         return inputs
 
     def prompt_length(self, docs: List[Document], **kwargs: Any) -> Optional[int]:
